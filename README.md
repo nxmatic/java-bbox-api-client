@@ -18,15 +18,69 @@ forwards) are out of scope for now.
 
 ## Maven
 
+The library is published to two registries — pick whichever fits your
+build setup. Both serve the exact same JAR; the JitPack route is more
+convenient (no auth, no settings.xml) but adds JitPack as a third-party
+build-time dependency.
+
+### Option 1 — JitPack (no auth)
+
 ```xml
+<repositories>
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+</repositories>
+
 <dependency>
-  <groupId>io.nxmatic</groupId>
+  <groupId>com.github.nxmatic</groupId>
   <artifactId>java-bbox-api-client</artifactId>
-  <version>0.1.0-SNAPSHOT</version>
+  <version>v0.1.0</version>
 </dependency>
 ```
 
-Requires JDK 25 (uses `java.net.http.HttpClient`).
+JitPack builds on demand the first time a consumer requests the tag, then
+caches forever. First fetch can take 1-3 minutes; subsequent fetches are
+instant.
+
+### Option 2 — GitHub Packages (auth required)
+
+```xml
+<repositories>
+  <repository>
+    <id>github-nxmatic</id>
+    <url>https://maven.pkg.github.com/nxmatic/java-bbox-api-client</url>
+  </repository>
+</repositories>
+
+<dependency>
+  <groupId>io.nxmatic</groupId>
+  <artifactId>java-bbox-api-client</artifactId>
+  <version>0.1.0</version>
+</dependency>
+```
+
+Add a server entry to `~/.m2/settings.xml` with a GitHub PAT carrying the
+`read:packages` scope:
+
+```xml
+<servers>
+  <server>
+    <id>github-nxmatic</id>
+    <username>YOUR_GITHUB_USERNAME</username>
+    <password>ghp_YourPersonalAccessTokenWithReadPackagesScope</password>
+  </server>
+</servers>
+```
+
+Note GitHub Packages requires authentication even for public packages; this
+is a [known](https://github.com/orgs/community/discussions/26634) GH
+limitation, not a configuration issue.
+
+### Requirements
+
+JDK 25 (uses `java.net.http.HttpClient` and records).
 
 ## Usage
 

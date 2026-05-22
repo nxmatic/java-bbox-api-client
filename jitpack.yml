@@ -1,0 +1,16 @@
+# JitPack build configuration.
+#
+# JitPack auto-builds tagged releases on demand and serves them at
+# `com.github.nxmatic:java-bbox-api-client:<tag>`.  We need to pin the JDK
+# to 25 explicitly — JitPack's runners default to JDK 8/11 depending on
+# the build engine, and this codebase uses records / pattern switches that
+# require 21+.
+#
+# Tests are skipped because JitPack runners have no access to the live
+# Bbox on the operator's LAN.  The full test suite still runs in the
+# `release.yml` workflow on GitHub Actions before each tag is published.
+jdk:
+  - openjdk25
+
+install:
+  - mvn -DskipTests=true install
