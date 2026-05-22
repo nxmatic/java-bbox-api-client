@@ -1,4 +1,4 @@
-package io.nxmatic.bbox;
+package io.nxmatic.bbox.api;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;

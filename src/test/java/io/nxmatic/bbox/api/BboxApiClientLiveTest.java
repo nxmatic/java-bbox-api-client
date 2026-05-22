@@ -1,10 +1,10 @@
-package io.nxmatic.bbox;
+package io.nxmatic.bbox.api;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import io.nxmatic.bbox.BboxApiClient.DhcpReservation;
+import io.nxmatic.bbox.api.BboxApiClient.DhcpReservation;
 import io.nxmatic.bbox.test.BboxSecrets;
 import io.nxmatic.bbox.test.BboxSecrets.Coordinates;
 import java.util.Optional;
@@ -53,15 +53,25 @@ final class BboxApiClientLiveTest {
     final Coordinates secrets = BboxSecrets.read();
     this.client = BboxApiClient.open(secrets.uri(), secrets.password());
 
-    // If a stale test row is present (previous failed run), delete it so the test starts clean.
-    final Optional<DhcpReservation> stale = client.findByMac(testMac);
-    if (stale.isPresent()) {
-      client.deleteReservation(stale.get().id());
-      // Re-check; if still present after a delete attempt, the bbox didn't honour it — bail.
-      Assumptions.assumeFalse(
-          client.findByMac(testMac).isPresent(),
-          "stale test row " + testMac + " could not be deleted; manual cleanup required");
+    waitUntilTestRowAbsent();
+  }
+
+  private void waitUntilTestRowAbsent() throws Exception {
+    for (int attempt = 0; attempt < 5; attempt++) {
+      final Optional<DhcpReservation> stale = client.findByMac(testMac);
+      if (stale.isEmpty()) {
+        return;
+      }
+      try {
+        client.deleteReservation(stale.get().id());
+      } catch (Exception ignored) {
+        // best-effort; will retry on next iteration
+      }
+      Thread.sleep(200);
     }
+    Assumptions.assumeFalse(
+        client.findByMac(testMac).isPresent(),
+        "stale test row " + testMac + " could not be deleted after retries; manual cleanup required");
   }
 
   @AfterEach

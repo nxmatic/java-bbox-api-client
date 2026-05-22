@@ -32,7 +32,7 @@ Maven repository and depend on it:
 <dependency>
   <groupId>io.nxmatic</groupId>
   <artifactId>java-bbox-api-client</artifactId>
-  <version>0.1.5</version>
+  <version>0.2.0</version>
 </dependency>
 ```
 
@@ -58,9 +58,60 @@ JDK 25 (uses `java.net.http.HttpClient` and records).
 
 ## Usage
 
+The library exposes two layers. Most consumers want the higher-level
+**reconciler** — given a list of desired rows, it computes the diff
+against the bbox and (optionally) applies the writes. Consumers that
+need raw HTTP CRUD use the lower-level **API client** directly.
+
+### Reconciler — declarative `desired` → bbox state
+
 ```java
-import io.nxmatic.bbox.BboxApiClient;
-import io.nxmatic.bbox.BboxApiClient.DhcpReservation;
+import io.nxmatic.bbox.api.BboxApiClient;
+import io.nxmatic.bbox.reconcile.DesiredReservation;
+import io.nxmatic.bbox.reconcile.ReservationReconciler;
+import io.nxmatic.bbox.reconcile.ReservationReconciler.Mode;
+import io.nxmatic.bbox.reconcile.Report;
+import java.net.URI;
+import java.util.List;
+
+List<DesiredReservation> desired = List.of(
+    new DesiredReservation("10:66:6a:4c:00:00", "192.168.1.131", "bioskop-master"),
+    new DesiredReservation("10:66:6a:4c:00:01", "192.168.1.132", "bioskop-peer1"));
+
+// MACs the bbox owns that we never touch (TVs, audio devices, manually-added rows).
+List<String> ignored = List.of("aa:bb:cc:dd:ee:ff");
+
+try (BboxApiClient bbox =
+        BboxApiClient.open(URI.create("https://mabbox.bytel.fr/"), "<admin-password>")) {
+
+  ReservationReconciler reconciler = new ReservationReconciler(bbox, ignored);
+
+  // Dry run: computes the diff, no writes.
+  Report preview = reconciler.reconcile(desired, Mode.DRY_RUN);
+  System.out.println("Would create: " + preview.created().size());
+  System.out.println("Would update: " + preview.drift().size());
+  System.out.println("Already correct: " + preview.matching().size());
+  System.out.println("Bbox-owned (ignored): " + preview.ignored().size());
+  System.out.println("Bbox-extra (unowned): " + preview.extras().size());
+
+  // Apply: same diff, but issues POST/PUT for missing/drifted rows.
+  // 'Extra' rows surface in the report but are never deleted (today's contract).
+  Report applied = reconciler.reconcile(desired, Mode.APPLY);
+  applied.failed().forEach(f ->
+      System.err.println("FAILED " + f.mac() + ": " + f.failureMessage().orElse("")));
+}
+```
+
+Identity is the MAC address (case-insensitive). The reconciler is
+single-use: the constructor fetches the bbox table once into a snapshot,
+and {@code reconcile} / {@code apply} calls decide against that snapshot.
+Create a new reconciler for each pass.
+
+### API client — raw HTTP CRUD
+
+```java
+import io.nxmatic.bbox.api.BboxApiClient;
+import io.nxmatic.bbox.api.BboxApiClient.DhcpReservation;
 import java.net.URI;
 
 try (BboxApiClient bbox =
@@ -75,17 +126,10 @@ try (BboxApiClient bbox =
   bbox.findByMac("10:66:6a:4c:00:00")
       .ifPresent(row -> System.out.println("id=" + row.id()));
 
-  // Create
-  int created = bbox.createReservation("02:00:bb:ff:ff:01", "192.168.1.250", "lab-host");
-  // 201 Created on success
-
-  // Update
-  int updated = bbox.updateReservation(13, "02:00:bb:ff:ff:01", "192.168.1.251", "lab-host");
-  // 200 OK on success
-
-  // Delete
-  int deleted = bbox.deleteReservation(13);
-  // 200 OK on success
+  // Create / Update / Delete return the HTTP status code.
+  int created = bbox.createReservation("02:00:bb:ff:ff:01", "192.168.1.250", "lab-host");  // 201
+  int updated = bbox.updateReservation(13, "02:00:bb:ff:ff:01", "192.168.1.251", "lab-host"); // 200
+  int deleted = bbox.deleteReservation(13);  // 200
 }
 ```
 
