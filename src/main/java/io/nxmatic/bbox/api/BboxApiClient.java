@@ -262,31 +262,65 @@ public final class BboxApiClient implements AutoCloseable {
    * Create a new reservation via {@code POST /api/v1/dhcp/clients}. Returns the HTTP status code.
    * Per the bbox contract, callers should follow up with {@link #findByMac(String)} to confirm
    * the row actually persisted (the bbox returns {@code 200 OK} for unsupported shapes too).
+   *
+   * <p>Transparently retries on transient HTTP {@code 400} — see {@link #sendMutation}.
    */
   public int createReservation(String mac, String ip, String hostname) throws Exception {
-    final HttpRequest request =
+    return sendMutation(() ->
         mutationRequest(baseUri.resolve("/api/v1/dhcp/clients"))
             .POST(BodyPublishers.ofString(reservationFormBody(mac, ip, hostname),
                 StandardCharsets.UTF_8))
-            .build();
-    return httpClient.send(request, BodyHandlers.ofString()).statusCode();
+            .build());
   }
 
-  /** Update an existing reservation via {@code PUT /api/v1/dhcp/clients/{id}}. */
+  /**
+   * Update an existing reservation via {@code PUT /api/v1/dhcp/clients/{id}}.
+   * Transparently retries on transient HTTP {@code 400} — see {@link #sendMutation}.
+   */
   public int updateReservation(int id, String mac, String ip, String hostname) throws Exception {
-    final HttpRequest request =
+    return sendMutation(() ->
         mutationRequest(baseUri.resolve("/api/v1/dhcp/clients/" + id))
             .PUT(BodyPublishers.ofString(reservationFormBody(mac, ip, hostname),
                 StandardCharsets.UTF_8))
-            .build();
-    return httpClient.send(request, BodyHandlers.ofString()).statusCode();
+            .build());
   }
 
-  /** Delete a reservation via {@code DELETE /api/v1/dhcp/clients/{id}}. */
+  /**
+   * Delete a reservation via {@code DELETE /api/v1/dhcp/clients/{id}}.
+   * Transparently retries on transient HTTP {@code 400} — see {@link #sendMutation}.
+   */
   public int deleteReservation(int id) throws Exception {
-    final HttpRequest request =
-        mutationRequest(baseUri.resolve("/api/v1/dhcp/clients/" + id)).DELETE().build();
-    return httpClient.send(request, BodyHandlers.ofString()).statusCode();
+    return sendMutation(() ->
+        mutationRequest(baseUri.resolve("/api/v1/dhcp/clients/" + id)).DELETE().build());
+  }
+
+  /**
+   * Send a mutating request, retrying on transient HTTP 400 from the bbox.
+   *
+   * <p>The Bbox firmware F@st5696b 25.5.30 sometimes rejects POST/PUT/DELETE issued shortly
+   * after a recent mutation on the same MAC with HTTP 400 ("invalid request"), apparently
+   * because the bbox's internal index hasn't settled.  Re-issuing the same request 200-600ms
+   * later succeeds.  We retry up to 3 times with backoff so consumers don't have to.
+   *
+   * <p>Other 4xx/5xx pass through unchanged — only 400 is treated as transient.
+   */
+  private int sendMutation(MutationRequestSupplier requestSupplier) throws Exception {
+    int status = 0;
+    for (int attempt = 0; attempt < 3; attempt++) {
+      final HttpRequest request = requestSupplier.build();
+      status = httpClient.send(request, BodyHandlers.ofString()).statusCode();
+      if (status != 400) {
+        return status;
+      }
+      // 200ms, 400ms — caller sees ≤600ms total wall-clock from one transient 400.
+      Thread.sleep(200L * (attempt + 1));
+    }
+    return status;
+  }
+
+  @FunctionalInterface
+  private interface MutationRequestSupplier {
+    HttpRequest build();
   }
 
   /**
