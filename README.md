@@ -18,33 +18,8 @@ forwards) are out of scope for now.
 
 ## Maven
 
-The library is published to two registries — pick whichever fits your
-build setup. Both serve the exact same JAR; the JitPack route is more
-convenient (no auth, no settings.xml) but adds JitPack as a third-party
-build-time dependency.
-
-### Option 1 — JitPack (no auth)
-
-```xml
-<repositories>
-  <repository>
-    <id>jitpack.io</id>
-    <url>https://jitpack.io</url>
-  </repository>
-</repositories>
-
-<dependency>
-  <groupId>com.github.nxmatic</groupId>
-  <artifactId>java-bbox-api-client</artifactId>
-  <version>v0.1.0</version>
-</dependency>
-```
-
-JitPack builds on demand the first time a consumer requests the tag, then
-caches forever. First fetch can take 1-3 minutes; subsequent fetches are
-instant.
-
-### Option 2 — GitHub Packages (auth required)
+The library is published to **GitHub Packages**. Add the registry as a
+Maven repository and depend on it:
 
 ```xml
 <repositories>
@@ -57,7 +32,7 @@ instant.
 <dependency>
   <groupId>io.nxmatic</groupId>
   <artifactId>java-bbox-api-client</artifactId>
-  <version>0.1.0</version>
+  <version>0.1.5</version>
 </dependency>
 ```
 
@@ -74,9 +49,8 @@ Add a server entry to `~/.m2/settings.xml` with a GitHub PAT carrying the
 </servers>
 ```
 
-Note GitHub Packages requires authentication even for public packages; this
-is a [known](https://github.com/orgs/community/discussions/26634) GH
-limitation, not a configuration issue.
+Note that GitHub Packages requires authentication even for public packages
+\(a [known](https://github.com/orgs/community/discussions/26634) GH limitation\).
 
 ### Requirements
 
