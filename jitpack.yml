@@ -1,28 +1,24 @@
 # JitPack build configuration.
 #
 # JitPack auto-builds tagged releases on demand and serves them at
-# `com.github.nxmatic:java-bbox-api-client:<tag>`.  Several constraints force
-# the explicit `install:` block instead of letting JitPack invoke its bundled
-# `mvn` directly:
+# `com.github.nxmatic:java-bbox-api-client:<tag>`.  Two constraints force
+# the explicit `install:` block instead of letting JitPack invoke its
+# bundled `mvn` directly:
 #
 #   1. JitPack runners default to JDK 8/11; this codebase needs JDK 21+
 #      for records and pattern switches.  We pin `openjdk25` below.
 #   2. JitPack ships an older Maven (around 3.5) that's incompatible with
 #      `maven-compiler-plugin >= 3.12` (which requires Maven 3.6.3+).
-#      We download a modern Maven inline so we don't have to pin plugin
-#      versions to legacy releases.
-#   3. The pom on `main` carries `0.1.0-SNAPSHOT` so iteration doesn't
-#      churn the version field per commit.  JitPack's harvester looks for
-#      artifacts at the version declared in the pom; without a `versions:set`
-#      the install path is `…/0.1.0-SNAPSHOT/…` and JitPack reports
-#      "No build artifacts found" when remapping to `com.github.nxmatic:…:vX.Y.Z`.
-#      The GH Actions release workflow does the same `versions:set` trick.
-#   4. The full live-router CRUD test in src/test needs LAN access to a real
-#      Bbox; we skip tests on JitPack.  The same suite still runs in the
-#      `release.yml` workflow on GitHub Actions before each tag is published.
+#      We download a modern Maven inline.
 #
-# JitPack injects `$VERSION` (the tag name including the leading `v`) into
-# the build environment.
+# The pom version is the source of truth — releases come from the
+# `release/v0` branch, which carries the literal release version
+# (no SNAPSHOT, no `versions:set` dance).  The workflow on GitHub
+# Actions trusts the same contract.
+#
+# Tests are skipped on JitPack: the live-router CRUD test in src/test
+# needs LAN access to a real bbox.  The full suite still runs in
+# `release.yml` on GitHub Actions before each tag is published.
 jdk:
   - openjdk25
 
@@ -32,7 +28,4 @@ install:
     curl --silent --location --fail \
       "https://archive.apache.org/dist/maven/maven-3/3.9.12/binaries/apache-maven-3.9.12-bin.tar.gz" \
       | tar -xz
-    MVN="$PWD/apache-maven-3.9.12/bin/mvn"
-    POM_VERSION="${VERSION#v}"
-    "$MVN" -B versions:set -DnewVersion="$POM_VERSION" -DgenerateBackupPoms=false
-    "$MVN" -DskipTests=true -B install
+    ./apache-maven-3.9.12/bin/mvn -DskipTests=true -B install
