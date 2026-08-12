@@ -3,14 +3,14 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>io.nxmatic</groupId>
+  <groupId>io.seedmatic</groupId>
   <artifactId>java-bbox-api-client</artifactId>
-  <version>0.2.0-SNAPSHOT</version>
+  <version>0.2.1</version>
   <packaging>jar</packaging>
 
   <name>java-bbox-api-client</name>
   <description>Java client for the Bouygues Bbox router REST API (login, DHCP reservations).</description>
-  <url>https://github.com/nxmatic/java-bbox-api-client</url>
+  <url>https://github.com/seedmatic/java-bbox-api-client</url>
 
   <licenses>
     <license>
@@ -20,17 +20,17 @@
   </licenses>
 
   <scm>
-    <connection>scm:git:https://github.com/nxmatic/java-bbox-api-client.git</connection>
-    <developerConnection>scm:git:https://github.com/nxmatic/java-bbox-api-client.git</developerConnection>
-    <url>https://github.com/nxmatic/java-bbox-api-client</url>
+    <connection>scm:git:https://github.com/seedmatic/java-bbox-api-client.git</connection>
+    <developerConnection>scm:git:https://github.com/seedmatic/java-bbox-api-client.git</developerConnection>
+    <url>https://github.com/seedmatic/java-bbox-api-client</url>
     <tag>HEAD</tag>
   </scm>
 
   <distributionManagement>
     <repository>
       <id>github</id>
-      <name>GitHub Packages — nxmatic/java-bbox-api-client</name>
-      <url>https://maven.pkg.github.com/nxmatic/java-bbox-api-client</url>
+      <name>GitHub Packages — seedmatic/java-bbox-api-client</name>
+      <url>https://maven.pkg.github.com/seedmatic/java-bbox-api-client</url>
     </repository>
   </distributionManagement>
 
